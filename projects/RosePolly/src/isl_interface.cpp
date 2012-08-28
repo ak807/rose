@@ -786,7 +786,10 @@ isl_map * isl_interface_build_access_map( isl_set * set, vector<SgExpression*>& 
 	
 	for ( int i = 0 ; i < dim-1 ; i++ )
 		out<<isl_set_get_dim_name(set,isl_dim_set,i)<<",";
-	out<<isl_set_get_dim_name(set,isl_dim_set,dim-1)<<"]->[";
+	if ( dim > 0 )
+		out<<isl_set_get_dim_name(set,isl_dim_set,dim-1)<<"]->[";
+	else
+		out<<"]->[";
 	
 	if ( subDim == 0 ) { // Scalar
 		out<<"] : }";
@@ -808,7 +811,7 @@ isl_map * isl_interface_build_access_map( isl_set * set, vector<SgExpression*>& 
 isl_map * isl_interface_build_schedule_map( isl_set * set, vector<int>& pos )
 {
 	isl_ctx * ctx = isl_set_get_ctx(set);
-	
+		
 	int parDim = isl_set_dim(set,isl_dim_param);
 	int dim = isl_set_dim(set,isl_dim_set);
 	int outDim = 2*dim+1;
@@ -820,7 +823,10 @@ isl_map * isl_interface_build_schedule_map( isl_set * set, vector<int>& pos )
 	
 	for ( int i = 0 ; i < dim-1 ; i++ )
 		out<<isl_set_get_dim_name(set,isl_dim_set,i)<<",";
-	out<<isl_set_get_dim_name(set,isl_dim_set,dim-1)<<"]->[";
+	if ( dim > 0 )
+		out<<isl_set_get_dim_name(set,isl_dim_set,dim-1)<<"]->[";
+	else
+		out<<"]->[";
 	
 	for ( int i = 0 ; i < outDim-1 ; i++ )
 		out<<"t"<<i<<",";
@@ -853,11 +859,19 @@ isl_map * isl_interface_build_map_with_order_csts( isl_set * src, isl_set * dest
 	
 	for ( int i = 0 ; i < uSize-1 ; i++ )
 		out<<isl_set_get_dim_name(dest,isl_dim_set,i)<<",";
-	out<<isl_set_get_dim_name(dest,isl_dim_set,uSize-1)<<"]->[";
+
+	if ( uSize != 0 )
+		out<<isl_set_get_dim_name(dest,isl_dim_set,uSize-1)<<"]->[";
+	else
+		out<<"]->[";
 	
 	for ( int i = 0 ; i < outSize-1 ; i++ )
 		out<<"t"<<i<<",";
-	out<<"t"<<outSize-1<<"] : ";
+	
+	if ( outSize != 0 )
+		out<<"t"<<outSize-1<<"] : ";
+	else
+		out<<"] : ";
 	
 	for ( int i = 0 ; i < uSize ; i++ ) {
 		if ( llv[i] == 2 ) {
@@ -877,6 +891,8 @@ isl_map * isl_interface_build_map_with_order_csts( isl_set * src, isl_set * dest
 				out<<"}";
 		}
 	}
+	if ( uSize == 0 )
+		out<<"}";
 	
 	return isl_map_read_from_str(ctx,out.str().c_str());
 }

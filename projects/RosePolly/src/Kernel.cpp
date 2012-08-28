@@ -18,7 +18,7 @@ Kernel::Kernel( int i, SgBasicBlock * sc )
 {
 	/* STEP 1 : Initialize data */
 	init_data();
-	
+
 	/* STEP 2 : Construct the graph */
 	set_graph();
 	

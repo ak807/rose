@@ -1,12 +1,13 @@
 
 #include <rose.h>
-#include <SageBuilder.h>
+#include <sageBuilder.h>
 
 using namespace std;
 
 #include <rosepoly/RosePollyModel.h>
 #include <rosepoly/RoseCloog.h>
 #include <rosepoly/simple_matrix.h>
+#include <rosepoly/traversals.h>
 
 using namespace SageBuilder;
 
@@ -100,6 +101,9 @@ FlowGraph * RoseCloog::print_to_flow_graph()
 		return cloog_graph;
 	
 	cloog_graph = unparse_clast(ast);
+
+	loopTypeTraversal l_traversal;
+	l_traversal.traverse(cloog_graph->get_head());
 	
 	return cloog_graph;
 }

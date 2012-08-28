@@ -109,6 +109,20 @@ polly_iterator<affineDependence> RosePollyModel::get_dependencies()
 
 int RosePollyModel::get_id() const { return ID; }
 
+void RosePollyModel::isl_playground() const
+{
+	cout<<"[ISL playground]"<<endl;
+
+	RosePollyBase::context;
+	/* Order constraints */
+	string order_cst = "[m] -> { [j] -> [j] : j>=0 and j<=m-1 and m>=1}";
+	isl_map * map = isl_map_read_from_str(RosePollyBase::context,order_cst.c_str());
+	map = isl_map_lexmax(map);
+	print_integer_map(map);
+	cout<<endl;
+	isl_map_free(map);
+}
+
 void RosePollyModel::print( int ident, bool print_deps ) const
 {
 	for ( int i = 0 ; i < ident ; i++ )
@@ -397,14 +411,14 @@ void affineStatement::add_scalar_dim( int num )
 	coeffs[nestL] = (num==-1) ? scc_id : num;
 	scc_vec.push_back(coeffs[nestL]);
 	transformation->add_hyperplane(coeffs,nestL);
-	delete(coeffs);
+	free(coeffs);
 }
 
 void affineStatement::add_hyperplane( int * coeffs )
 {
 	h_types.push_back(LOOP);
 	transformation->add_hyperplane(coeffs,nestL);
-	delete(coeffs);
+	free(coeffs);
 }
 
 pollyDomain * affineStatement::get_domain() const { return Domain; }

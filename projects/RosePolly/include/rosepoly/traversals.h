@@ -91,5 +91,15 @@ public:
 	
 };
 
+class loopTypeTraversal : public FlowGraphTraversal
+{
+	vector<loop_type> l_types;
+
+	public:
+	loopTypeTraversal();
+	virtual void visit( BasicNode * aNode );
+
+};
+
 #endif
 

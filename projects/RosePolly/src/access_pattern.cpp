@@ -13,6 +13,9 @@ AccessPattern::AccessPattern( const AccessPattern& ap )
 : refExp(ap.get_refExp()), parent(ap.get_parent()), myIO(ap.get_IO()), ID(ap.get_id()),
 pattern(NULL)
 {	
+	for ( int i = 0 ; i < ap.get_dim() ; i++ )
+		Subs.push_back(ap.get_subscript(i));
+
 	if ( ap.pattern )
 		pattern = new pollyMap(*ap.pattern);
 }
@@ -37,6 +40,8 @@ void AccessPattern::set_polly_map( pollyDomain * d, RosePollyCustom * c )
 {
 	pattern = c->add_pattern(d,this);
 }
+
+void AccessPattern::set_io( IO io ) { myIO = io; }
 
 void AccessPattern::set_id( int i ) { ID = i; }
 
@@ -82,12 +87,10 @@ void AccessPattern::print( int ident ) const
 
 void search_for_access_patterns( SgExpression * exp, vector<AccessPattern*>& pList, IO anIO )
 {
-	
 	if ( !isRegularExp(exp->get_type()) ) {
 		report_error( "Type of expression not supported", exp );
 		
 	} else if ( isSgPntrArrRefExp(exp) != NULL ) {
-		
 		AccessPattern * pat = extract_pattern( isSgPntrArrRefExp(exp), anIO );
 		if ( pat == NULL )
 			report_error("Unrecognized expression", exp);
@@ -95,20 +98,32 @@ void search_for_access_patterns( SgExpression * exp, vector<AccessPattern*>& pLi
 			pList.push_back(pat);
 			
 	} else if ( isSgVarRefExp(exp) != NULL ) {
-		
 		pList.push_back( new AccessPattern( exp, anIO ) );
 		
 	} else if ( isSgBinaryOp(exp) != NULL ) {
-		
 		search_for_access_patterns( isSgBinaryOp(exp)->get_lhs_operand(), pList, anIO );
 		search_for_access_patterns( isSgBinaryOp(exp)->get_rhs_operand(), pList, anIO );
 		
 	} else if ( isSgUnaryOp(exp) != NULL ) {
-		
 		search_for_access_patterns( isSgUnaryOp(exp)->get_operand(), pList, anIO );
 		
 	} else if ( isSgValueExp(exp) != NULL ) {
 		return;
+	} else if ( isSgFunctionCallExp(exp) != NULL ) {
+		SgFunctionCallExp * func = isSgFunctionCallExp(exp);
+		string func_name = isSgFunctionRefExp(func->get_function())->get_symbol()->get_name().getString();
+		int i = 0;
+		for ( i = 0 ; i < RosePollyCustom::legalFuncs.size() ; i++ ) {
+			if ( func_name == RosePollyCustom::legalFuncs[i]->name ) {
+				SgExpressionPtrList arg_list = func->get_args()->get_expressions();
+				ROSE_ASSERT(arg_list.size()==RosePollyCustom::legalFuncs[i]->num_args);
+				for ( int j = 0 ; j < arg_list.size() ; j++ )
+					search_for_access_patterns( arg_list[j], pList, RosePollyCustom::legalFuncs[i]->arg_spec[j] );
+				break;
+			}
+		}
+		if ( i == RosePollyCustom::legalFuncs.size() )
+			report_error( "Function call not supported (Tip: Please see RosePollyCustom class for a solution)", exp );
 	} else {
 		report_error( "Unrecognized expression", exp );
 	}

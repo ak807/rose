@@ -30,6 +30,7 @@ public:
 	void add_subscript( SgExpression * exp );
 	void set_polly_map( pollyDomain * d, RosePollyCustom * c );
 	void set_id( int i );
+	void set_io( IO io );
 	
 	int get_id() const;
 	string get_name() const;

@@ -34,7 +34,6 @@ vector<Kernel*> findRosePollyCandidates( SgNode * root, search_type t )
 		string pragmaName = isSgPragma(pragmas[i])->get_pragma();
 		
 		if ( pragmaName == annotName ) {
-			
 			SgPragmaDeclaration * pr_decl = isSgPragmaDeclaration(pragmas[i]->get_parent());
 			SgStatement * block = getNextStatement(pr_decl);
 			
@@ -64,40 +63,47 @@ void RosePollyDependenceAnalysis( vector<affineStatement*>& stmts )
 {
 	DependenceTraversal dep_trav;
 	for ( int i = 0 ; i < stmts.size() ; i++ ) {
-		
+		// cout<<"Analysing statement ("<<stmts[i]->get_ID()<<")"<<endl;
 		int read_size = stmts[i]->get_num_reads();
 		int write_size = stmts[i]->get_num_writes();
 		
+		// cout<<"Reads = "<<read_size<<" Writes = "<<write_size<<endl;
 		/* STEP 1 : True dependencies (W_R) */
 		dep_trav.init(stmts[i],W_R);
 		// cout<<"[Finding True-Dependencies for STM["<<stmts[i]->get_ID()<<"] ]"<<endl;
 		for ( int j = 0 ; j < read_size ; j++ ) {
 			if ( stmts[i]->has_valid_read_map(j) ) {
 				dep_trav.set_ref(j);
-				// cout<<"-calling the traversal for ref("<<i<<")"<<endl;
+				// cout<<"-calling the traversal for ref("<<j<<")"<<endl;
+				// cout<<"ref name = "<<stmts[i]->get_read_name(j)<<endl;
 				dep_trav.traverse(stmts[i]->next(BACKWARD));
 			}
 		}
 		
+		// cout<<"Past step 1"<<endl;
 		/* STEP 2 : Anti dependencies (R_W) */
 		dep_trav.init(stmts[i],R_W);
 		// cout<<"[Finding Anti-Dependencies for STM["<<stmts[i]->get_ID()<<"] ]"<<endl;
 		for ( int j = 0 ; j < write_size ; j++ ) {
 			if ( stmts[i]->has_valid_write_map(j) ) {
 				dep_trav.set_ref(j);
-				// cout<<"-calling the traversal for ref("<<i<<")"<<endl;
+				// cout<<"-calling the traversal for ref("<<j<<")"<<endl;
 				dep_trav.traverse(stmts[i]->next(BACKWARD));
 			}
 		}
 		
+		// cout<<"Past step 2"<<endl;
 		/* STEP 3 : Output dependencies (W_W) */
 		dep_trav.init(stmts[i],W_W);
+		// cout<<"[Finding Output-Dependencies for STM["<<stmts[i]->get_ID()<<"] ]"<<endl;
 		for ( int j = 0 ; j < write_size ; j++ ) {
 			if ( stmts[i]->has_valid_write_map(j) ) {
 				dep_trav.set_ref(j);
+				// cout<<"-calling the traversal for ref("<<j<<")"<<endl;
 				dep_trav.traverse(stmts[i]->next(BACKWARD));
 			}
 		}
+		// cout<<"[FINISHED for STM["<<stmts[i]->get_ID()<<"]]"<<endl;
 		
 		/* STEP 4 : Input dependencies (R_R) */
 		/* dep_trav.init(stmts[i],R_R);
@@ -117,7 +123,8 @@ RosePollyModel * RosePollyBuildModel( FlowGraph * graph, RosePollyCustom * c )
 	pollyExtr.traverse( graph->get_head() );
 	pollyExtr.consolidate();
 	
-	// I use a vector of stmts for efficiency ... don't forget to comment on that
+	/* I use a vector of stmts for efficiency ... don't forget to comment on that 
+	... well I guess I forgot ... */ 
 	RosePollyDependenceAnalysis( pollyExtr.stmts );
 	
 	return new RosePollyModel( pollyExtr.stmts, k ); 

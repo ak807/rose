@@ -13,25 +13,34 @@ then
 		fi
 		
 	done
-	cd ../include
+	cd ../include/rosepoly
 	for _FILE in *.h
 	do
-		if [ $_FILE -nt $(find ../../../../.RosePolly/include -name $_FILE -print | head -1) ] 
+		if [ $_FILE -nt $(find ../../../../../.RosePolly/include/rosepoly -name $_FILE -print | head -1) ] 
 		then
 			echo "copying ... "
 			echo $_FILE
-			cp $_FILE ../../../../.RosePolly/include
+			cp $_FILE ../../../../../.RosePolly/include/rosepoly
 		fi
 		
 	done
-	cd ../../../../.RosePolly
+	cd ../../../../../.RosePolly
 	make
 	
 else
 	mkdir ../../../.RosePolly
 	cp -rf * ../../../.RosePolly
 	cd ../../../.RosePolly
-	
+	rm *.* && rm build* && rm clean* && rm run*
+	rm -rf examples
+	cd src && rm a.out && cd ../include/rosepoly && rm Makefile.am
+	cd ../../
+
+	mv ./independent_build/configure.ac ./ && mv ./independent_build/Makefile.am ./
+	mv ./independent_build/src/Makefile.am ./src
+	mv ./independent_build/paths.mk ./
+	rm -rf ./independent_build
+
 	if autoreconf --install
 	then
 		if ./configure

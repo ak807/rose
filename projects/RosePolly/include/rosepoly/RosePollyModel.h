@@ -169,6 +169,8 @@ public:
 	polly_iterator<affineStatement> get_statements();
 	polly_iterator<affineDependence> get_dependencies();
 	
+
+	void isl_playground() const;
 	int dep_satisfaction_update( int level );
 	bool deps_satisfaction_check() const;
 	int get_id() const;

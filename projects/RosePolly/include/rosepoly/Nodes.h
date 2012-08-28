@@ -126,6 +126,7 @@ public:
 	AccessPattern * get_read( int pos ) const;
 	AccessPattern * get_write( int pos ) const;
 	string get_name() const;
+	loop_type get_loop_type( int pos ) const;
 	
 	polly_iterator<AccessPattern> get_reads();
 	polly_iterator<AccessPattern> get_writes();
@@ -202,6 +203,7 @@ public:
 	void set_body( FlowGraph * g );
 	void set_body_node( BasicNode * b );
 	void iterate();
+	void set_loop_type( loop_type l );
 	
 	SgExpression * get_start() const;
 	SgExpression * get_end() const;

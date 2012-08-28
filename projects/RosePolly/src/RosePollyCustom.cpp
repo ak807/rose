@@ -5,8 +5,27 @@ using namespace std;
 
 #include <rosepoly/RosePollyInterface.h>
 
+func_specs::~func_specs() { delete [] arg_spec; }
 
 // CUSTOMIZING INTERFACE
+
+vector<func_specs*> RosePollyCustom::legalFuncs;
+
+RosePollyCustom::RosePollyCustom() 
+{
+	func_specs * temp = new func_specs;
+	temp->name = "sqrt";
+	temp->num_args = 1;
+	temp->arg_spec = new IO[1];
+	temp->arg_spec[0] = IN;
+	legalFuncs.push_back(temp);
+}
+
+RosePollyCustom::~RosePollyCustom()
+{
+	for ( int i = 0 ; i < legalFuncs.size() ; i++ )
+		delete(legalFuncs[i]);
+}
 
 bool RosePollyCustom::isAffineExpression( SgExpression * exp, const vector<string>& legalVars ) const
 {

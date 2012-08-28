@@ -42,9 +42,32 @@ void SimpleNode::print( int ident ) const
 void SimpleNode::replace( SimpleNode * n )
 {
 	succ = n->succ;
-	succ->link(this,BACKWARD);
+	if ( succ != NULL ) {
+		if ( succ->get_type() == CONDITIONTAIL ) {
+			Conditional * cond = (Conditional*)succ;
+			if ( cond->next(BACKWARD) == n )
+				cond->set_true_node(this);
+			else
+				cond->set_false_node(this);
+			cond->next(BACKWARD);
+		} else {
+			succ->link(this,BACKWARD);
+		}
+	}
+
 	pred = n->pred;
-	pred->link(this,FORWARD);
+	if ( pred != NULL ) {
+		if ( pred->get_type() == CONDITIONHEAD ) {
+			Conditional * cond = (Conditional*)pred;
+			if ( cond->next(FORWARD) == n )
+				cond->set_true_node(this);
+			else
+				cond->set_false_node(this);
+			cond->next(FORWARD);
+		} else {
+			pred->link(this,FORWARD);
+		}
+	}
 	delete(n);
 }
 
@@ -106,6 +129,13 @@ void Statement::set_patterns( symbol_table& data )
 		string ap_name = isSgVarRefExp(exp)->get_symbol()->get_name().getString();
 		
 		symbol_table::iterator it = data.find(ap_name);
+		if ( patList[i]->get_IO() == INOUT ) { // if IO is INOUT must split in two
+			AccessPattern * dual = new AccessPattern(*patList[i]);
+			dual->set_io(IN);
+			patList[i]->set_io(OUT);
+			it->second.add_pattern(dual);
+			add_pattern(dual);
+		}
 		it->second.add_pattern(patList[i]);
 		add_pattern(patList[i]);
 	}
@@ -128,6 +158,12 @@ string Statement::get_name() const
 	return out.str();
 }
 
+loop_type Statement::get_loop_type( int pos ) const
+{
+	ROSE_ASSERT(pos<l_types.size());
+	return l_types[pos];
+}
+
 polly_iterator<AccessPattern> Statement::get_reads() 
 {
 	return polly_iterator<AccessPattern>( Reads.begin(), Reads.end() );
@@ -142,14 +178,14 @@ void Statement::add_pattern( AccessPattern * pat )
 {
 	switch( pat->get_IO() )
 	{
-		case INOUT:
-			Writes.push_back(pat);
 		case IN:
 			Reads.push_back(pat);
 			break;
 		case OUT:
 			Writes.push_back(pat);
 			break;
+		default:
+			ROSE_ASSERT(false);
 	}
 }
 
@@ -443,6 +479,15 @@ ForLoop::ForLoop( SgExpression * st, SgExpression * e, string sy, SgForStatement
 				 ForLoop * bd, ForLoop * be, NodeType t )
 : BasicNode(t), start(st), end(e), symbol(sy), myLoop(l), myLoopType(UNDEFINED), 
 out(NULL), body(bd), back_edge(be), Iter(false) {}
+
+void ForLoop::set_loop_type( loop_type l ) 
+{ 
+	myLoopType = l; 
+	if ( myType == LOOPHEAD )
+		return;
+	ROSE_ASSERT(back_edge!=NULL);
+	back_edge->set_loop_type(l);
+}
 
 ForLoop::~ForLoop() {}
 

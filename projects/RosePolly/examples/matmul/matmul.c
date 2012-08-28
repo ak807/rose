@@ -1,82 +1,59 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <assert.h>
 
-#include "timer.h"
-
+#define M 1024
+#define N 1024
+#define K 1024
 #define alpha 1
 #define beta 1
 
-extern int bar2();
+#pragma declarations
+double A[M][K];
+double B[K][N];
+double C[M][N];
+#pragma enddeclarations
+
+#ifdef PERFCTR
+#include "papiStdEventDefs.h"
+#include <papi.h>
+#include "papi_defs.h"
+#endif
+
+#include "util.h"
+
+double t_start, t_end;
 
 int main()
 {
-    	int i, j, k;
+    int i, j, k;
 
-	double cpu_start, cpu_end;
-	double gpu_start, gpu_end;
+    init_array();
 
-	int N = bar2();
+#ifdef PERFCTR
+    PERF_INIT; 
+#endif
 
-	int ** A, ** B, ** C;
-	int ** cpu_C;
+    IF_TIME(t_start = rtclock());
 
-	A = (int**)malloc(N*sizeof(int*));
-	B = (int**)malloc(N*sizeof(int*));
-	C = (int**)malloc(N*sizeof(int*));
-	cpu_C = (int**)malloc(N*sizeof(int*));
-
-	for ( i = 0 ; i < N ; i++ ) {
-		A[i] = (int*)malloc(N*sizeof(int));
-		B[i] = (int*)malloc(N*sizeof(int));
-		C[i] = (int*)malloc(N*sizeof(int));
-		cpu_C[i] = (int*)malloc(N*sizeof(int));
-	}
-
-	for (i=0; i<N; i++) {
-        	for (j=0; j<N; j++) {
-            		A[i][j] = (i + j);
-            		B[i][j] = (i*j);
-            		C[i][j] = 0;
-        	}
-    	}
-cpu_start = rtclock();
-	for(i=0; i<N; i+=1)
-        	for(j=0; j<N; j+=1)  
-            		for(k=0; k<N; k+=1)
-                		cpu_C[i][j] = beta*cpu_C[i][j] + alpha*A[i][k] * B[k][j];
-cpu_end = rtclock();
-
-	  printf("CPU time -> %0.6lfs\n", cpu_end - cpu_start);
-
-gpu_start = rtclock();
-#pragma accelerate
-{
-    for(int i=0; i<N; i+=1)
-        for(int j=0; j<N; j+=1)  
-            for(int k=0; k<N; k+=1)
+#pragma scop
+    for(i=0; i<M; i++)
+        for(j=0; j<N; j++)  
+            for(k=0; k<K; k++)
                 C[i][j] = beta*C[i][j] + alpha*A[i][k] * B[k][j];
-}
-gpu_end = rtclock();
+#pragma endscop
 
-printf("GPU time -> %0.6lfs\n", gpu_end - gpu_start);
+    IF_TIME(t_end = rtclock());
+    IF_TIME(fprintf(stderr, "%0.6lfs\n", t_end - t_start));
 
+#ifdef PERFCTR
+    PERF_EXIT; 
+#endif
 
-for ( i = 0 ; i < N ; i++ )
-	for ( j = 0 ; j < N ; j++ ) 
-		assert(cpu_C[i][j]==C[i][j]);
+  if (fopen(".test", "r")) {
+    print_array();
+  }
 
-for ( i = 0 ; i < N ; i++ ) {
-	free(A[i]);
-	free(B[i]);
-	free(C[i]);
-	free(cpu_C[i]);
-}
-
-free(A);
-free(B);
-free(C);
-free(cpu_C);
-
-    return 0;
+  return 0;
 }

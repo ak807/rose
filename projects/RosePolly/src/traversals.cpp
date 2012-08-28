@@ -5,7 +5,7 @@ using namespace std;
 #include <rosepoly/RosePollyModel.h>
 #include <rosepoly/traversals.h>
 #include <rosepoly/data.h>
-#include <rosepoly/utilities.h>
+#include <rosepoly/Utilities.h>
 #include <rosepoly/error.h>
 #include <rosepoly/access_pattern.h>
 #include <rosepoly/RosePollyCustom.h>
@@ -279,7 +279,7 @@ void DependenceTraversal::visit( BasicNode * Node )
 void DependenceTraversal::dependence_test( affineStatement * source, int ref )
 {
 	/* Sanity check */
-	if ( type == W_R || type == W_W ) {
+	if ( type == W_R || type == W_W || liveness ) {
 		if ( !source->has_valid_write_map(ref) )
 			return;
 	} else {
@@ -297,6 +297,7 @@ void DependenceTraversal::dependence_test( affineStatement * source, int ref )
 	
 	/* Step 3 : Add the domain of the source statement */
 	depMap->intersect_range(source->get_domain());
+	// depMap->print(2);
 	
 	/* Step 4 : Add conflict constraints */
 	AccessPattern * d_pat = (type==W_W||type==R_W) ? Dest->get_write(destRef) : Dest->get_read(destRef);
@@ -312,11 +313,13 @@ void DependenceTraversal::dependence_test( affineStatement * source, int ref )
 	
 	/* Step 5 : Get the solution if needed */
 	if ( depMap->is_empty() ) {
+		// cout<<"NO DEP"<<endl;
 		delete(depMap);
 		return;
 	} else {
 		// cout<<"DEP FOUND !!"<<endl;
 		depMap->lexmax();
+		// depMap->print(2);
 		if ( !liveness ) {
 			vector<pollyMap*> counter_parts = depMap->get_disjoints();
 			for ( int i = 0 ; i < counter_parts.size() ; i++ ) {
@@ -328,8 +331,40 @@ void DependenceTraversal::dependence_test( affineStatement * source, int ref )
 		
 		if ( liveness || type != R_W )
 			Domain->subtract(depMap->get_map_domain());
-		
 		delete(depMap);
+	}
+}
+
+
+// LOOP TYPE TRAVERSAL
+
+loopTypeTraversal::loopTypeTraversal() {}
+
+void loopTypeTraversal::visit( BasicNode * aNode )
+{
+	ForLoop * loop;
+	Statement * statement;
+	switch(aNode->get_type())
+	{
+		case LOOPHEAD:
+			l_types.push_back(PARALLEL);
+			break;
+		case LOOPTAIL:
+			loop = (ForLoop*)aNode;
+			loop->set_loop_type(l_types.back());
+			l_types.pop_back();
+			break;
+		case STATEMENT:
+			statement = (Statement*)aNode;
+			for ( int i = 0 ; i < l_types.size() ; i++ )
+			{
+				loop_type temp = statement->get_loop_type(i);
+				if ( temp > l_types[i] )
+					l_types[i] = temp;
+			}
+			break;
+		default :
+			break;
 	}
 }
 

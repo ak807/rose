@@ -13,17 +13,41 @@ using namespace std;
 
 #include <rosepoly/RosePollyInterface.h>
 
+class correlationCond : public defaultRosePollyCustom {
+	
+	
+public:
+	
+	virtual bool evaluate_conditional( Conditional * cond ) const;
+	virtual pollyDomain * add_conditional( pollyDomain * d, Conditional * cond ) const;
+};
+
+bool correlationCond::evaluate_conditional( Conditional * cond ) const
+{
+	return true;
+}
+
+pollyDomain * correlationCond::add_conditional( pollyDomain * d, Conditional * cond ) const
+{
+	return d;
+}
+
 int main(int argc, char * argv[]) {
 	
 	SgProject * proj = frontend(argc,argv);
 	
+	// RosePollyCustom * c = new correlationCond();
 	vector<RosePollyModel*> kernels = RosePollyBuildModel(proj);
+	// delete(c);
+
+	// kernels[0]->isl_playground();
 	
 	for ( int i = 0 ; i < kernels.size() ; i++ ) {
 		
+		// kernels[i]->print(2);
 		RosePluto * pluto = RosePollyBuildPluto(kernels[i]);
 		pluto->apply(SMART_FUSE);
-		pluto->loop_skewing(3,false);
+		// pluto->loop_skewing(3,false);
 		pluto->print(2);
 		
 		RoseCloog * cloog = RosePollyBuildCloog(pluto);

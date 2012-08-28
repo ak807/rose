@@ -7,6 +7,8 @@
 
 3. Remove "normalize_matrices" method from the permutability cst method -> it is isl_specific
 
+4. Preserve iterator names through-out
+
 ## Dependencies
 
 - ISL: Integer Set Library
@@ -18,8 +20,9 @@
 Compile and link with `libpoly`:
 
 ``` bash
-$ g++ /Users/konstantinid1/Internship/Source/projects/RosePolly/src/main.cpp -I/Users/konstantinid1/Internship/Install/rosepoly-0.1.0/include -L/Users/konstantinid1/Internship/Install/rosepoly-0.1.0/lib -lrosepoly -I/Users/konstantinid1/Internship/Install/include -L/Users/konstantinid1/Internship/Install/lib -lrose -I/Users/konstantinid1/Internship/Tools/CLOOG/include -L/Users/konstantinid1/Internship/Tools/CLOOG/lib -lcloog-isl -DCLOOG_INT_GMP -I/Users/konstantinid1/Internship/Tools/ISL/include -L/Users/konstantinid1/Internship/Tools/ISL/lib -lisl -DISL -I/Users/konstantinid1/Development/opt/include  
-```
+$ g++ /Users/konstantinid1/Internship/Source/projects/RosePolly/src/main.cpp -I/Users/konstantinid1/Internship/Install/rosepoly-0.1.0/include -L/Users/konstantinid1/Internship/Install/rosepoly-0.1.0/lib -lrosepoly -I/Users/konstantinid1/Internship/Install/include -L/Users/konstantinid1/Internship/Install/lib -lrose -I/Users/konstantinid1/Internship/Tools/CLOOG/include -L/Users/konstantinid1/Internship/Tools/CLOOG/lib -lcloog-isl -DCLOOG_INT_GMP -I/Users/konstantinid1/Internship/Tools/ISL/include -L/Users/konstantinid1/Internship/Tools/ISL/lib -lisl -DISL -I/Users/konstantinid1/Development/opt/include
+
+g++ main.cpp -I/home/ak807/ROSE/Install/rosepoly-0.1.0/include -I/home/ak807/ROSE/Install/include -I/home/ak807/Boost/include -I/home/ak807/Tools/ISL/include -I/home/ak807/Tools/CLOOG/include -DISL -DCLOOG_INT_GMP -L/home/ak807/ROSE/Install/rosepoly-0.1.0/lib -lrosepoly -L/home/ak807/Tools/ISL/lib -lisl -Wl,-rpath=/home/ak807/Tools/ISL/lib -L/home/ak807/Tools/CLOOG/lib -lcloog-isl -Wl,-rpath=/home/ak807/Tools/CLOOG/lib -L/home/ak807/ROSE/Install/lib -lrose -Wl,-rpath-link=/home/ak807/Boost/lib -Wl,-rpath=/home/ak807/Boost/lib -Wl,-rpath-link=/home/ak807/ROSE/Install/lib -Wl,-rpath=/home/ak807/ROSE/Install/lib -Wl,-rpath=/usr/lib/jvm/java-6-openjdk-amd64/jre/lib/amd64/server
 
 Run our `libpoly` translator on a test file:
 

@@ -14,15 +14,18 @@
 
 #include "util.h"
 
-extern int bar();
+int bar();
 
 int main()
 {
-    int i, j, k, l, m, n;
+    int i, j, k, l, m, n, t;
+
+    int i1, i2;
+
     double t_start, t_end;
 
-	int NN = bar();
 	int TT = bar();
+	int NN = bar();
 
     init_array();
 
@@ -53,14 +56,14 @@ int main()
 }
 
     IF_TIME(t_end = rtclock());
-    IF_TIME(printf("%0.6lfs\n", t_end - t_start));
+    IF_TIME(fprintf(stderr, "%0.6lfs\n", t_end - t_start));
 
 #ifdef PERFCTR
     PERF_EXIT; 
 #endif
 
-#ifdef TEST
-    print_array();
-#endif
+    if (fopen(".test", "r")) {
+        print_array();
+    }
     return 0;
 }

@@ -1,95 +1,44 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+
 #include <assert.h>
 
-#include "timer.h"
+#include "decls.h"
 
-extern int bar1();
+#include "util.h"
 
 int main()
 {
-    int i, j;
+    int i, j, k, l, t;
 
-	int N = bar();
+    double t_start, t_end;
 
-	double cpu_start, cpu_end;
-	double gpu_start, gpu_end;
+    init_array() ;
 
-	int ** a;
-	int * x1, * x2, * y_1, * y_2;
-	int * cpu_x1, * cpu_x2;
+    IF_TIME(t_start = rtclock());
 
-	a = (int**)malloc(N*sizeof(int*));
-	for ( i = 0 ; i < N ; i++ )
-		a[i] = (int*)malloc(N*sizeof(int));
-
-	x1 = (int*)malloc(N*sizeof(int));
-	x2 = (int*)malloc(N*sizeof(int));
-	y_1 = (int*)malloc(N*sizeof(int));
-	y_2 = (int*)malloc(N*sizeof(int));
-	cpu_x1 = (int*)malloc(N*sizeof(int));
-	cpu_x2 = (int*)malloc(N*sizeof(int));
-
-	for (i=0; i<N; i++) {
-        	y_1[i] = i;
-        	y_2[i] = i+1;
-        	x1[i] = 0;
-        	x2[i] = 0;
-
-        	for (j=0; j<N; j++)
-            		a[i][j] = i+j+1;
-    	}
-
-	cpu_start = rtclock();
-	for (int i=0; i<N; i+=1) {
-        	for (int j=0; j<N; j+=1) {
-            		cpu_x1[i] = cpu_x1[i] + a[i][j] * y_1[j];
-        	}
-    	}
-
-   	for (int i=0; i<N; i+=1) {
-        	for (int j=0; j<N; j+=1) {
-           		 cpu_x2[i] = cpu_x2[i] + a[j][i] * y_2[j];
-        	}
-    	}
-	cpu_end = rtclock();
-
-	  printf("CPU time -> %0.6lfs\n", cpu_end - cpu_start);
-
-
-gpu_start = rtclock();
-#pragma accelerate
-{
-    for (int i=0; i<N; i+=1) {
-        for (int j=0; j<N; j+=1) {
+    /* pluto start (N) */
+#pragma scop
+    for (i=0; i<N; i++) {
+        for (j=0; j<N; j++) {
             x1[i] = x1[i] + a[i][j] * y_1[j];
         }
     }
 
-    for (int i=0; i<N; i+=1) {
-        for (int j=0; j<N; j+=1) {
+    for (i=0; i<N; i++) {
+        for (j=0; j<N; j++) {
             x2[i] = x2[i] + a[j][i] * y_2[j];
         }
     }
-}
+#pragma endscop
+    /* pluto end */
 
-gpu_end = rtclock();
+    IF_TIME(t_end = rtclock());
+    IF_TIME(fprintf(stderr, "%0.6lfs\n", t_end - t_start));
 
-printf("GPU time -> %0.6lfs\n", gpu_end - gpu_start);
-
-for ( i = 0 ; i < N ; i++ )
-	assert(cpu_x1[i]==x1[i]&&cpu_x2[i]==x2[i]);
-
-for ( i=0 ; i < N ; i++ )
-	free(a[i]);
-
-free(a);
-free(x1);
-free(x2);
-free(y_1);
-free(y_2);
-free(cpu_x1);
-free(cpu_x2);
-
+    if (fopen(".test", "r")) {
+        print_array();
+    }
     return 0;
 }

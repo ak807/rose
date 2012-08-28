@@ -380,6 +380,8 @@ void pollyMap::lexmax()
 
 void pollyMap::add_conflict_constraint( pollyMap * lhs, pollyMap * rhs )
 {
+	// cout<<"Conflict LHS = "; lhs->print(2);
+	// cout<<"Conflict RHS = "; rhs->print(2);
 	Map = integer_map_add_conflict_cst(Map, lhs->get_integer_map(), rhs->get_integer_map() );
 }
 

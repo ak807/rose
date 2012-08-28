@@ -26,11 +26,11 @@ void print_array()
 
     for (i=0; i<N; i++) {
         for (j=0; j<N; j++) {
-            fprintf(stderr, "%lf ", a[i][j]);
-            if (j%80 == 20) fprintf(stderr, "\n");
+            fprintf(stdout, "%lf ", a[i][j]);
+            if (j%80 == 20) fprintf(stdout, "\n");
         }
     }
-    fprintf(stderr, "\n");
+    fprintf(stdout, "\n");
 }
 
 double rtclock()
