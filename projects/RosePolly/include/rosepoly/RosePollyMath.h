@@ -8,6 +8,7 @@
 #ifdef ISL
 #include <isl/set.h>
 #include <isl/map.h>
+#include <isl/aff.h>
 
 #include <rosepoly/isl_interface.h>
 

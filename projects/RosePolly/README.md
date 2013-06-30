@@ -9,6 +9,8 @@
 
 4. Preserve iterator names through-out
 
+5. Make easy CLOOG interface decoupled from statements and schedules (easy to test random schedules)
+
 ## Dependencies
 
 - ISL: Integer Set Library

@@ -8,7 +8,7 @@
 #endif
 
 
-void init_array()
+void init_array( double ** a )
 {
     int i, j;
 
@@ -20,7 +20,7 @@ void init_array()
 }
 
 
-void print_array()
+void print_array( double ** a)
 {
     int i, j;
 

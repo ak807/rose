@@ -113,14 +113,65 @@ void RosePollyModel::isl_playground() const
 {
 	cout<<"[ISL playground]"<<endl;
 
-	RosePollyBase::context;
+	bool free_ctx = false;
+	if ( RosePollyBase::context == NULL ) {
+		RosePollyBase::context = init_polly_context();
+		free_ctx = true;
+	}
+
+	// string footprint = "[t0,t1,t2,T0,T1,T2]->{[m1,d0,d1,d2] : d0>=t0 and d0<=t0+T0-1 and d1>=t1 and d1<=t1+T1-1 and d2>=t2 and d2<=t2+T2-1 and m1=d1-2*d0 and T0>0 and T1>0 and T2>0}";
+	// string footprint = "[t0,t1,T0,T1]->{[m1,d0,d1] : d0>=t0 and d0<=t0+T0-1 and d1>=t1 and d1<=t1+T1-1 and m1=d1-2*d0 and T0>0 and T1>0 }";
+	// isl_set * set = isl_set_read_from_str(RosePollyBase::context,footprint.c_str());
+	// print_integer_set(set);
+	// cout<<endl;
+
+	/* set = isl_set_lexmin(set);
+	print_integer_set(set);
+	cout<<endl;
+
+	isl_set_free(set); */
+
+	 // (0.0) for (l1=0;l1<=2*T1c0+T1c1-3;l1++) {
+    // for (l2=max(0,l1-T1c1+1);l2<=min(2*T1c0+T1c2-3,l1+T1c2-1);l2++) {
+
+	// (0.-1) for (l1=0;l1<=T1c0+T1c1-2;l1++) {
+    // for (l2=max(1,l1-T1c1+2);l2<=min(l1+T1c2,T1c0+T1c2-1);l2++) {
+
+	// (-1.-1) for (l1=1;l1<=T1c0+T1c1-1;l1++) {
+    // for (l2=max(1,l1-T1c1+1);l2<=min(T1c0+T1c2-1,l1+T1c2-1);l2++) {
+
+	// string footprint0 = "[T0,T1,T2]->{[l1,l2]: l1>=0 and l1<=2*T0+T1-3 and l2>=0 and l2>=l1-T1+1 and l2<=2*T0+T2-3 and l2<=l1+T2-1 and T0>0 and T1>0 and T2>0}";
+
+	// string footprint1 = "[T0,T1,T2]->{[l1,l2]: l1>=0 and l1<=T0+T1-2 and l2>=1 and l2>=l1-T1+2 and l2<=l1+T2 and l2<=T0+T2-1 and T0>0 and T1>0 and T2>0}";
+
+	// string footprint2 = "[T0,T1,T2]->{[l1,l2]: l1>=1 and l1<=T0+T1-1 and l2>=1 and l2>=l1-T1+1 and l2<=T0+T2-1 and l2<=l1+T2-1 and T0>0 and T1>0 and T2>0 }";
+
+	// isl_set * set0 = isl_set_read_from_str(RosePollyBase::context,footprint0.c_str());
+	// isl_set * set1 = isl_set_read_from_str(RosePollyBase::context,footprint1.c_str());
+	// isl_set * set2 = isl_set_read_from_str(RosePollyBase::context,footprint2.c_str());
+	// isl_set * set3 = isl_set_read_from_str(RosePollyBase::context,footprint3.c_str());
+
+	// isl_set * result1 = isl_set_union(set0,set1);
+	// isl_set * result2 = isl_set_union(result1,set2);
+	// isl_set * result3 = isl_set_union(result2,set3);
+
+	/* cout<<endl<<endl;
+	isl_basic_set * hull = isl_set_convex_hull(result2);
+	print_integer_set(hull);
+	cout<<endl<<endl;
+
+	isl_basic_set_free(hull); */
+
+	// RosePollyBase::context;
 	/* Order constraints */
-	string order_cst = "[m] -> { [j] -> [j] : j>=0 and j<=m-1 and m>=1}";
-	isl_map * map = isl_map_read_from_str(RosePollyBase::context,order_cst.c_str());
-	map = isl_map_lexmax(map);
+	/* string footprint = "[T1c0,T1c1,T1c2] -> { [c0,c1,c2] -> [c1-c0,c2-c0] : c0>=0 and c0<T1c0 and c1>=T1c0 and c1<T1c0+T1c1 and c2>=T1c0 and c2<T1c0+T1c2}";
+	isl_map * map = isl_map_read_from_str(RosePollyBase::context,footprint.c_str());
 	print_integer_map(map);
 	cout<<endl;
-	isl_map_free(map);
+	isl_map_free(map); */
+	
+	if ( free_ctx )
+		free_polly_context(RosePollyBase::context);
 }
 
 void RosePollyModel::print( int ident, bool print_deps ) const

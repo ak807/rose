@@ -34,34 +34,40 @@ pollyDomain * correlationCond::add_conditional( pollyDomain * d, Conditional * c
 
 int main(int argc, char * argv[]) {
 	
-	SgProject * proj = frontend(argc,argv);
+	// SgProject * proj = frontend(argc,argv);
 	
 	// RosePollyCustom * c = new correlationCond();
-	vector<RosePollyModel*> kernels = RosePollyBuildModel(proj);
+	// vector<RosePollyModel*> kernels = RosePollyBuildModel(proj);
 	// delete(c);
 
 	// kernels[0]->isl_playground();
 	
-	for ( int i = 0 ; i < kernels.size() ; i++ ) {
+	RosePollyModel * temp = new RosePollyModel;
+	temp->isl_playground();
+
+	delete(temp);
+
+	// for ( int i = 0 ; i < kernels.size() ; i++ ) {
 		
-		// kernels[i]->print(2);
-		RosePluto * pluto = RosePollyBuildPluto(kernels[i]);
-		pluto->apply(SMART_FUSE);
+		// kernels[i]->print(2,true);
+		// RosePluto * pluto = RosePollyBuildPluto(kernels[i]);
+		// pluto->apply(SMART_FUSE);
 		// pluto->loop_skewing(3,false);
-		pluto->print(2);
 		
-		RoseCloog * cloog = RosePollyBuildCloog(pluto);
-		CloogOptions * cl_options = RoseCloog::init_default_options();
-		cloog->apply( cl_options );
+		// pluto->print(2,true);
+
+		// RoseCloog * cloog = RosePollyBuildCloog(pluto);
+		// CloogOptions * cl_options = RoseCloog::init_default_options();
+		// cloog->apply( cl_options );
 		
 		// cloog->print_to_file("cloogOUT.cloog");
-		cloog->print_to_screen();
+		// cloog->print_to_screen();
 		/* FlowGraph * graph = cloog->print_to_flow_graph();
 		graph->print(2); */
-	}
-	RosePollyTerminate();
+	// }
+	// RosePollyTerminate();
 	
-	proj->unparse();
+	// proj->unparse();
 	
 	return 0;
 }

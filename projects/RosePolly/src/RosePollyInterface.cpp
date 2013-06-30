@@ -176,10 +176,10 @@ vector<RosePollyModel*> RosePollyBuildModel( SgNode * root, RosePollyCustom * c,
 		} else {
 			cout<<"PASS !"<<endl;
 		}
-		
+
 		// STEP 2 : Build Polyhedral Model From Flow Graph
 		RosePollyModel * model = RosePollyBuildModel( cdts[i]->get_flow_graph(), c );
-		
+
 		buffer.push_back(model);
 		live_objects.push_back(model);
 		

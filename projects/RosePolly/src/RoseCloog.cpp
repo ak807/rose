@@ -127,11 +127,12 @@ void RoseCloog::print_to_file( const char * name ) const
 CloogDomain * RoseCloog::get_param_context() const
 {
 	int pSize = parameters.size();
-	simple_matrix mat(pSize,pSize+1); // +1 for the cst
+	/* simple_matrix mat(pSize,pSize+1); // +1 for the cst
 	for ( int i = 0 ; i < pSize ; i++ ) {
 		mat.set_entry(i,i,1);
 		mat.set_entry(i,pSize,-50);
-	}
+	} */
+	simple_matrix mat(0,pSize+1);
 	
 	pollyDomain param_ctx(parameters);
 	param_ctx.append_inequalities(&mat);
