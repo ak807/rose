@@ -1,4 +1,4 @@
-
+ 
 /* unparser.h
  * This header file contains the class declaration for the newest unparser. Six
  * C files include this header file: unparser.C, modified_sage.C, unparse_stmt.C, 
@@ -118,7 +118,7 @@ class UnparseLanguageIndependentConstructs
 
       //! unparse expression functions implemented in unparse_expr.C
        // DQ (4/25/2005): Made this virtual so that Gabriel could build a specialized unparser.
-          virtual void unparseExpression              (SgExpression* expr, SgUnparse_Info& info);
+          ROSE_DLL_API virtual void unparseExpression              (SgExpression* expr, SgUnparse_Info& info);
 
           virtual void unparseExprList                (SgExpression* expr, SgUnparse_Info& info);
 
@@ -307,6 +307,7 @@ class UnparseLanguageIndependentConstructs
           virtual void unparseOmpScheduleClause             (SgOmpClause* clause, SgUnparse_Info& info);
           virtual void unparseOmpVariablesClause            (SgOmpClause* clause, SgUnparse_Info& info);
           virtual void unparseOmpExpressionClause           (SgOmpClause* clause, SgUnparse_Info& info);
+          virtual void unparseOmpExpressionsClause          (SgOmpClause* clause, SgUnparse_Info& info);
           virtual void unparseOmpClause                     (SgOmpClause* clause, SgUnparse_Info& info);
 
           virtual void unparseOmpSimpleStatement               (SgStatement* stmt,     SgUnparse_Info& info);

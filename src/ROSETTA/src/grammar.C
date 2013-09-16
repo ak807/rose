@@ -3038,7 +3038,7 @@ Grammar::buildCode ()
      string  variantEnumNames=buildVariantEnumNames();
 
   // DQ (4/8/2004): Maybe we need a more obscure name to prevent global name space pollution?
-     variantEnumNamesFile << "\n const char* roseGlobalVariantNameList[] = { \n" << variantEnumNames << "\n};\n\n";
+     variantEnumNamesFile << "\n#include \"rosedll.h\"\n ROSE_DLL_API const char* roseGlobalVariantNameList[] = { \n" << variantEnumNames << "\n};\n\n";
 
      string rtiFunctionsSourceFileName = string(getGrammarName())+"RTI.C";
      StringUtility::FileWithLineNumbers rtiFile;
@@ -3212,6 +3212,8 @@ Grammar::GrammarNodeInfo Grammar::getGrammarNodeInfo(Terminal* grammarnode) {
         ||nodeName == "SgOmpClauseBodyStatement"
         ||nodeName == "SgOmpParallelStatement"
         ||nodeName == "SgOmpSectionsStatement"
+        ||nodeName == "SgOmpTargetStatement"
+        ||nodeName == "SgOmpTargetDataStatement"
         ||nodeName == "SgOmpSingleStatement"
         ||nodeName == "SgOmpTaskStatement"
         ||nodeName == "SgOmpForStatement"
@@ -3496,12 +3498,14 @@ Grammar::buildTreeTraversalFunctions(Terminal& node, StringUtility::FileWithLine
                   }
                 // Liao, 5/30/2009
                // More exceptional cases for SgOmpClauseBodyStatement and its derived classes
-              // We allow them to have mixed members (simple member and contanter member)
+              // We allow them to have mixed members (simple member and container member)
                else if (string(node.getName()) == "SgOmpClauseBodyStatement"
                  ||string(node.getName()) == "SgOmpParallelStatement"
                  ||string(node.getName()) == "SgOmpSingleStatement"
                  ||string(node.getName()) == "SgOmpTaskStatement"
                  ||string(node.getName()) == "SgOmpSectionsStatement"
+                 ||string(node.getName()) == "SgOmpTargetStatement"
+                 ||string(node.getName()) == "SgOmpTargetDataStatement"
                  ||string(node.getName()) == "SgOmpForStatement"
                  ||string(node.getName()) == "SgOmpDoStatement"
                  )
@@ -3601,6 +3605,8 @@ Grammar::buildTreeTraversalFunctions(Terminal& node, StringUtility::FileWithLine
                  ||string(node.getName()) == "SgOmpSingleStatement"
                  ||string(node.getName()) == "SgOmpTaskStatement"
                  ||string(node.getName()) == "SgOmpSectionsStatement"
+                 ||string(node.getName()) == "SgOmpTargetStatement"
+                 ||string(node.getName()) == "SgOmpTargetDataStatement"
                  ||string(node.getName()) == "SgOmpForStatement"
                  ||string(node.getName()) == "SgOmpDoStatement"
                  )

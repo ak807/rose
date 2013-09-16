@@ -127,6 +127,8 @@ Partitioner::parse_switches(const std::string &s, unsigned flags)
             bits = SgAsmFunction::FUNC_EH_FRAME;
         } else if (word=="import") {
             bits = SgAsmFunction::FUNC_IMPORT;
+        } else if (word=="export") {
+            bits = SgAsmFunction::FUNC_EXPORT;
         } else if (word=="symbol") {
             bits = SgAsmFunction::FUNC_SYMBOL;
         } else if (word=="pattern") {
@@ -235,7 +237,7 @@ Partitioner::discover_jump_table(BasicBlock *bb, bool do_create, ExtentMap *tabl
                 rose_addr_t base_va = mi->get_address().offset;
                 size_t nentries = 0;
                 while (1) {
-                    uint8_t buf[entry_size];
+                    uint8_t *buf = new uint8_t[entry_size];
                     size_t nread = ro_map.read(buf, base_va+nentries*entry_size, entry_size);
                     if (nread!=entry_size)
                         break;
@@ -246,6 +248,7 @@ Partitioner::discover_jump_table(BasicBlock *bb, bool do_create, ExtentMap *tabl
                         break;
                     successors.insert(target_va);
                     ++nentries;
+                    delete [] buf;
                 }
                 if (nentries>0) {
                     if (table_extent)
@@ -296,10 +299,10 @@ Partitioner::update_analyses(BasicBlock *bb)
         }
     }
 
-    /* Call target analysis. For x86, a function call is any CALL instruction except when the call target is the fall-through
-     * address and the instruction at the fall-through address pops the top of the stack (this is how position independent
-     * code loads EIP into a general-purpose register). FIXME: For now we'll assume that any call to the fall-through address
-     * is not a function call. */
+    /* Call target analysis. A function call is any CALL-like instruction except when the call target is the fall-through
+     * address and the instruction at the fall-through address pops the top of the stack (this is one way position independent
+     * code loads the instruction pointer register into a general-purpose register). FIXME: For now we'll assume that any call
+     * to the fall-through address is not a function call. */
     rose_addr_t fallthrough_va = bb->last_insn()->get_address() + bb->last_insn()->get_size();
     rose_addr_t target_va = NO_TARGET;
     bool looks_like_call = bb->insns.front()->node->is_function_call(inodes, &target_va);
@@ -577,6 +580,13 @@ Partitioner::Function::show_properties(FILE *debug) const
         fprintf(debug, "{nbblocks=%zu, ndblocks=%zu, may-return=%s}",
                 basic_blocks.size(), data_blocks.size(), may_return_str.c_str());
     }
+}
+
+Partitioner::BasicBlock *
+Partitioner::Function::entry_basic_block() const
+{
+    BasicBlocks::const_iterator bi=basic_blocks.find(entry_va);
+    return bi==basic_blocks.end() ? NULL : bi->second;
 }
 
 /* Return partitioner to initial state */
@@ -919,7 +929,7 @@ Partitioner::find_bb_containing(rose_addr_t va, bool create/*true*/)
 
         /* Find address of next instruction, or whether this insn is the end of the block */
         va += insn->get_size();
-        if (insn->terminatesBasicBlock()) { /*naively terminates?*/
+        if (insn->terminates_basic_block()) { /*naively terminates?*/
             bool complete;
             const Disassembler::AddressSet& sucs = successors(bb, &complete);
             if ((func_heuristics & SgAsmFunction::FUNC_CALL_TARGET) && is_function_call(bb, NULL)) {
@@ -1339,6 +1349,23 @@ Partitioner::mark_func_symbols(SgAsmGenericHeader *fhdr)
                     value += section->get_mapped_actual_va();
                 if (find_instruction(value))
                     add_function(value, SgAsmFunction::FUNC_SYMBOL, symbol->get_name()->get_string());
+            }
+        }
+    }
+}
+
+/* Adds PE exports as function entry points. */
+void
+Partitioner::mark_export_entries(SgAsmGenericHeader *fhdr)
+{
+    SgAsmGenericSectionList *sections = fhdr->get_sections();
+    for (size_t i=0; i<sections->get_sections().size(); ++i) {
+        if (SgAsmPEExportSection *export_section = isSgAsmPEExportSection(sections->get_sections()[i])) {
+            const SgAsmPEExportEntryPtrList &exports = export_section->get_exports()->get_exports();
+            for (SgAsmPEExportEntryPtrList::const_iterator ei=exports.begin(); ei!=exports.end(); ++ei) {
+                rose_addr_t va = (*ei)->get_export_rva().get_va();
+                if (find_instruction(va))
+                    add_function(va, SgAsmFunction::FUNC_EXPORT, (*ei)->get_name()->get_string());
             }
         }
     }
@@ -2564,6 +2591,17 @@ Partitioner::name_import_entries(SgAsmGenericHeader *fhdr)
     }
 }
 
+/** Find the addresses for all PE Import Address Tables. Adds them to Partitioner::pe_iat_extents. */
+void
+Partitioner::find_pe_iat_extents(SgAsmGenericHeader *hdr)
+{
+    SgAsmGenericSectionPtrList iat_sections = hdr->get_sections_by_name("Import Address Table");
+    for (size_t i=0; i<iat_sections.size(); ++i) {
+        if (-1==iat_sections[i]->get_id() && iat_sections[i]->is_mapped())
+            pe_iat_extents.insert(Extent(iat_sections[i]->get_mapped_actual_va(), iat_sections[i]->get_mapped_size()));
+    }
+}
+
 /* Seed function starts based on criteria other than control flow graph. */
 void
 Partitioner::pre_cfg(SgAsmInterpretation *interp/*=NULL*/)
@@ -2578,6 +2616,7 @@ Partitioner::pre_cfg(SgAsmInterpretation *interp/*=NULL*/)
     if (interp) {
         const SgAsmGenericHeaderPtrList &headers = interp->get_headers()->get_headers();
         for (size_t i=0; i<headers.size(); i++) {
+            find_pe_iat_extents(headers[i]);
             if (func_heuristics & SgAsmFunction::FUNC_ENTRY_POINT)
                 mark_entry_targets(headers[i]);
             if (func_heuristics & SgAsmFunction::FUNC_EH_FRAME)
@@ -2586,12 +2625,16 @@ Partitioner::pre_cfg(SgAsmInterpretation *interp/*=NULL*/)
                 mark_func_symbols(headers[i]);
             if (func_heuristics & SgAsmFunction::FUNC_IMPORT)
                 mark_elf_plt_entries(headers[i]);
+            if (func_heuristics & SgAsmFunction::FUNC_EXPORT)
+                mark_export_entries(headers[i]);
         }
     }
     if (func_heuristics & SgAsmFunction::FUNC_PATTERN)
         mark_func_patterns();
     if (func_heuristics & SgAsmFunction::FUNC_CALL_INSN)
         mark_call_insns();
+
+    
 
     /* Run user-defined function detectors, making sure that the basic block starts are up-to-date for each call. */
     if (func_heuristics & SgAsmFunction::FUNC_USERDEF) {
@@ -2804,6 +2847,31 @@ Partitioner::discover_blocks(Function *f, unsigned reason)
         discover_blocks(f, *hi, reason);
 }
 
+bool
+Partitioner::is_pe_dynlink_thunk(Instruction *insn)
+{
+    SgAsmx86Instruction *insn_x86 = insn ? isSgAsmx86Instruction(insn->node) : NULL;
+    if (!insn_x86 || x86_jmp!=insn_x86->get_kind() || insn_x86->get_operandList()->get_operands().size()!=1)
+        return false; // not a thunk: wrong instruction
+    SgAsmMemoryReferenceExpression *mre = isSgAsmMemoryReferenceExpression(insn_x86->get_operandList()->get_operands()[0]);
+    SgAsmIntegerValueExpression *addr = mre ? isSgAsmIntegerValueExpression(mre->get_address()) : NULL;
+    if (!addr)
+        return false; // not a dynamic linking thunk: wrong addressing mode
+    return pe_iat_extents.contains(Extent(addr->get_absolute_value(), 4));
+}
+
+bool
+Partitioner::is_pe_dynlink_thunk(BasicBlock *bb)
+{
+    return bb && bb->insns.size()==1 && is_pe_dynlink_thunk(bb->insns.front());
+}
+
+bool
+Partitioner::is_pe_dynlink_thunk(Function *func)
+{
+    return func && func->basic_blocks.size()==1 && is_pe_dynlink_thunk(func->entry_basic_block());
+}
+
 void
 Partitioner::analyze_cfg(SgAsmBlock::Reason reason)
 {
@@ -2851,8 +2919,9 @@ Partitioner::analyze_cfg(SgAsmBlock::Reason reason)
                 for (Disassembler::AddressSet::iterator si=succs.begin();
                      si!=succs.end() && !bb->function->possible_may_return();
                      ++si) {
-                    if (0!=(target_va=*si) && NULL!=(target_bb=find_bb_starting(target_va, false)) &&
-                        target_bb->function && target_bb->function!=bb->function &&
+                    target_va = *si;
+                    target_bb = target_va!=0 ? find_bb_starting(target_va, false) : NULL;
+                    if (target_bb && target_bb->function && target_bb->function!=bb->function &&
                         target_va==target_bb->function->entry_va && target_bb->function->possible_may_return()) {
                         /* The block bb isn't a function call, but branches to the entry point of another function.  If that
                          * function returns then so does this one.  This handles situations like:
@@ -2879,6 +2948,22 @@ Partitioner::analyze_cfg(SgAsmBlock::Reason reason)
                 if (debug) {
                     fprintf(debug, "  F%08"PRIx64" may return by virtue of incomplete successors\n",
                             bb->function->entry_va);
+                }
+            }
+
+            // PE dynamic linking thunks are typically placed in the .text section and consist of an indirect jump through one
+            // of the import address tables.  If we didn't dynamically link in ROSE, then the IATs probably don't hold valid
+            // function addresses, in which case we can't determine if the thunk returns.  Therefore, when this situation
+            // happens, we assume that the imported function returns.
+            if (!bb->function->possible_may_return() && is_pe_dynlink_thunk(bb->function)) {
+                bool invalid_callee_va = !succs_complete;
+                for (Disassembler::AddressSet::iterator si=succs.begin(); !invalid_callee_va && si!=succs.end(); ++si)
+                    invalid_callee_va = NULL==find_instruction(*si);
+                if (invalid_callee_va) {// otherwise we can just analyze the linked-in code
+                    bb->function->promote_may_return(SgAsmFunction::RET_SOMETIMES);
+#if 1 /*DEBUGGING [Robb P. Matzke 2013-06-20]*/
+                    std::cerr <<"ROBB: PE dynlink thunk at " <<StringUtility::addrToString(bb->address()) <<"\n";
+#endif
                 }
             }
         }
@@ -3015,6 +3100,11 @@ Partitioner::detach_thunk(Function *func)
         second_va = *(succs.begin());
     }
 
+    /* The JMP target must be an instruction in this same function. Normally it is. */
+    BasicBlock *bb2 = find_bb_containing(second_va, false);
+    if (NULL==bb2 || bb2->function!=func)
+        return false;
+
     /* Don't split the function if the first instruction is a successor of any of the function's blocks. */
     for (BasicBlocks::iterator bi=func->basic_blocks.begin(); bi!=func->basic_blocks.end(); ++bi) {
         BasicBlock *bb = bi->second;
@@ -3045,6 +3135,7 @@ Partitioner::detach_thunk(Function *func)
     for (BasicBlocks::iterator bi=bblocks.begin(); bi!=bblocks.end(); ++bi) {
         if (bi->first==func->entry_va) {
             BasicBlock *new_bb = find_bb_starting(second_va);
+            assert(new_bb!=NULL);
             if (new_bb->function==func) {
                 remove(func, new_bb);
                 append(new_func, new_bb, SgAsmBlock::BLK_ENTRY_POINT);
@@ -3241,6 +3332,63 @@ Partitioner::merge_functions(Function *parent, Function *other)
     delete other;
 }
 
+/** Mark PE dynamic linking thunks as thunks and give them a name if possible. */
+void
+Partitioner::name_pe_dynlink_thunks(SgAsmInterpretation *interp/*=NULL*/)
+{
+    // AST visitor finds PE Import Items and adds their address/name pair to a map.
+    struct AddrName: AstSimpleProcessing {
+        typedef std::map<rose_addr_t, std::string> NameMap;
+        NameMap names;
+        SgAsmGenericHeader *hdr;
+        AddrName(SgAsmInterpretation *interp) {
+            if (interp) {
+                const SgAsmGenericHeaderPtrList &hdrs = interp->get_headers()->get_headers();
+                for (SgAsmGenericHeaderPtrList::const_iterator hi=hdrs.begin(); hi!=hdrs.end(); ++hi) {
+                    hdr = *hi;
+                    traverse(hdr, preorder);
+                }
+            }
+        }
+        void visit(SgNode *node) {
+            if (SgAsmPEImportItem *import_item = isSgAsmPEImportItem(node)) {
+                std::string name = import_item->get_name()->get_string();
+                if (!name.empty() && !import_item->get_by_ordinal()) {
+                    // Add a name for both the absolute virtual address and the relative virtual address. The IAT will contain
+                    // relative addresses unless BinaryLoader applied fixups.
+                    rose_addr_t va = import_item->get_hintname_rva().get_va();
+                    names[va] = name;
+                    rose_addr_t rva = va - hdr->get_base_va();
+                    names[rva] = name;
+                }
+            }
+        }
+        std::string operator()(rose_addr_t va) const {
+            NameMap::const_iterator found = names.find(va);
+            return found==names.end() ? std::string() : found->second;
+        }
+    } names(interp);
+
+    // Identify PE dynamic linking thunks and give them the name of the imported function to which they branch.  FIXME: we
+    // might want to change the name slightly because otherwise the thunk will have the same name as the linked-in function
+    // if/after BinaryLoader does the linking.  In contrast, the ELF executables typically place their dynamic linking
+    // thunks in a ".plt" section (Procedure Lookup Table) and we name the thunks so that if the linked-in function is
+    // named "printf", the thunk is named "printf@plt".
+    for (Functions::iterator fi=functions.begin(); fi!=functions.end(); ++fi) {
+        Function *func = fi->second;
+        if (is_pe_dynlink_thunk(func)) {
+            func->reason |= SgAsmFunction::FUNC_THUNK;
+            if (func->name.empty()) {
+                BasicBlock *bb = func->entry_basic_block();
+                bool complete;
+                Disassembler::AddressSet succs = successors(bb, &complete);
+                if (complete && 1==succs.size())
+                    func->name = names(*succs.begin());
+            }
+        }
+    }
+}
+
 void
 Partitioner::post_cfg(SgAsmInterpretation *interp/*=NULL*/)
 {
@@ -3357,6 +3505,7 @@ Partitioner::post_cfg(SgAsmInterpretation *interp/*=NULL*/)
 
     /* Give existing functions names from symbol tables. Don't create more functions. */
     if (interp && 0!=(func_heuristics & SgAsmFunction::FUNC_IMPORT)) {
+        name_pe_dynlink_thunks(interp);
         const SgAsmGenericHeaderPtrList &headers = interp->get_headers()->get_headers();
         for (size_t i=0; i<headers.size(); i++) {
             name_plt_entries(headers[i]); // give names to ELF .plt trampolines
@@ -3971,7 +4120,7 @@ Partitioner::detectBasicBlocks(const Disassembler::InstructionMap &insns) const
          * acting more like a "PUSH EIP" (we should probably just look at the CALL instruction itself rather than also looking
          * for the following POP, but since ROSE doesn't currently apply the relocation tables before disassembling, the CALL
          * with a zero offset is quite common. [RPM 2009-08-24] */
-        if (insn->terminatesBasicBlock()) {
+        if (insn->terminates_basic_block()) {
             Disassembler::InstructionMap::const_iterator found = insns.find(next_va);
             if (found!=insns.end()) {
                 SgAsmx86Instruction *insn_x86 = isSgAsmx86Instruction(insn);
@@ -3979,7 +4128,7 @@ Partitioner::detectBasicBlocks(const Disassembler::InstructionMap &insns) const
                 rose_addr_t branch_target_va;
                 if (insn_x86 &&
                     (insn_x86->get_kind()==x86_call || insn_x86->get_kind()==x86_farcall) &&
-                    x86GetKnownBranchTarget(insn_x86, branch_target_va) &&
+                    insn->get_branch_target(&branch_target_va) &&
                     branch_target_va==next_va && insn2_x86->get_kind()==x86_pop) {
                     /* The CALL is acting more like a "PUSH EIP" and should not end the basic block. */
                 } else if (bb_starts.find(next_va)==bb_starts.end()) {

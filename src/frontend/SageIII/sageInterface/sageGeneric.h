@@ -1416,6 +1416,14 @@ namespace sg
         Dispatcher::dispatch(rv, assume_sage_type<SgCAFCoExpression>(*n));
         break;
 
+      case V_SgShapeExpression:
+        Dispatcher::dispatch(rv, assume_sage_type<SgShapeExpression>(*n));
+        break;
+        
+      case V_SgArraySectionExp:
+        Dispatcher::dispatch(rv, assume_sage_type<SgArraySectionExp>(*n));
+        break;
+        
       case V_SgDesignatedInitializer:
         Dispatcher::dispatch(rv, assume_sage_type<SgDesignatedInitializer>(*n));
         break;
@@ -1682,10 +1690,6 @@ namespace sg
 
       case V_SgAsmDoubleFloatValueExpression:
         Dispatcher::dispatch(rv, assume_sage_type<SgAsmDoubleFloatValueExpression>(*n));
-        break;
-
-      case V_SgAsmVectorValueExpression:
-        Dispatcher::dispatch(rv, assume_sage_type<SgAsmVectorValueExpression>(*n));
         break;
 
       case V_SgAsmValueExpression:

@@ -1973,7 +1973,7 @@ T* SageBuilder::buildUnaryExpression_nfi(SgExpression* operand) {
   { \
      return SageBuilder::buildUnaryExpression_nfi<Sg##suffix>(op); \
   } \
-  Sg##suffix* SageBuilder::build##suffix(SgExpression* op) \
+  ROSE_DLL_API Sg##suffix* SageBuilder::build##suffix(SgExpression* op) \
   { \
      return SageBuilder::buildUnaryExpression<Sg##suffix>(op); \
   }
@@ -2046,6 +2046,14 @@ SgVarArgOp * SageBuilder::buildVarArgOp_nfi(SgExpression *  operand_i, SgType * 
   ROSE_ASSERT(result);
   if (operand_i) {operand_i->set_parent(result); markLhsValues(result);}
   setOneSourcePositionNull(result);
+  return result;
+}
+
+SgMinusOp *SageBuilder::buildMinusOp(SgExpression* operand_i, SgUnaryOp::Sgop_mode  a_mode)
+{
+  SgMinusOp* result = buildUnaryExpression<SgMinusOp>(operand_i);
+  ROSE_ASSERT(result);
+  result->set_mode(a_mode);
   return result;
 }
 
@@ -2173,11 +2181,11 @@ T* SageBuilder::buildBinaryExpression_nfi(SgExpression* lhs, SgExpression* rhs)
 
 }
 #define BUILD_BINARY_DEF(suffix) \
-  Sg##suffix* SageBuilder::build##suffix##_nfi(SgExpression* lhs, SgExpression* rhs) \
+  ROSE_DLL_API Sg##suffix* SageBuilder::build##suffix##_nfi(SgExpression* lhs, SgExpression* rhs) \
   { \
      return buildBinaryExpression_nfi<Sg##suffix>(lhs, rhs); \
   } \
-  Sg##suffix* SageBuilder::build##suffix(SgExpression* lhs, SgExpression* rhs) \
+  ROSE_DLL_API Sg##suffix* SageBuilder::build##suffix(SgExpression* lhs, SgExpression* rhs) \
   { \
      return buildBinaryExpression<Sg##suffix>(lhs, rhs); \
   }
@@ -2239,10 +2247,20 @@ BUILD_BINARY_DEF(XorAssignOp)
 BUILD_BINARY_DEF(VarArgCopyOp)
 BUILD_BINARY_DEF(VarArgStartOp)
 
+BUILD_BINARY_DEF(ShapeExpression)
+
 #undef BUILD_BINARY_DEF
 
 
-
+SgArraySectionExp* SageBuilder::buildArraySectionExp( SgExpression* lower_bound/*=NULL*/, SgExpression* length/*=NULL*/ )
+{
+    SgArraySectionExp* result = new SgArraySectionExp( lower_bound, length );
+    if( lower_bound != NULL ) {lower_bound->set_parent(result);}
+    if( length != NULL ) {length->set_parent(result);}
+    setOneSourcePositionForTransformation(result);
+    return result;
+}
+        
 SgArrayType* SageBuilder::buildArrayType(SgType* base_type/*=NULL*/, SgExpression* index/*=NULL*/)
 {
   SgArrayType* result = new SgArrayType(base_type,index);
@@ -2507,16 +2525,9 @@ SgSizeOfOp* SageBuilder::buildSizeOfOp_nfi(SgType* type /* = NULL*/)
 //! This is part of Java specific operator support.
 SgJavaInstanceOfOp* SageBuilder::buildJavaInstanceOfOp(SgExpression* exp, SgType* type)
    {
-  // Not sure what should be the correct type of the SgJavaInstanceOfOp expression...
-     SgType* exp_type = NULL;
+     SgType* exp_type = SgTypeBool::createType();
 
-  // I think this should evaluate to be a boolean type (typically used in conditionals).
-  // if (exp != NULL) exp_type = exp->get_type();
-
-  // Warn that this support in not finished.
-     printf ("WARNING: Support for SgJavaInstanceOfOp is incomplete, expression type not specified, should it be SgTypeBool? \n");
-
-     SgJavaInstanceOfOp* result = new SgJavaInstanceOfOp(exp,type, exp_type);
+     SgJavaInstanceOfOp* result = new SgJavaInstanceOfOp(exp, type, exp_type);
      ROSE_ASSERT(result);
      if (exp != NULL)
         {
@@ -2648,8 +2659,10 @@ SageBuilder::buildVarRefExp(const SgName& name, SgScopeStatement* scope/*=NULL*/
           SgInitializedName * name1 = buildInitializedName(name,SgTypeUnknown::createType());
           name1->set_scope(scope); //buildInitializedName() does not set scope for various reasons
           varSymbol= new SgVariableSymbol(name1);
+          varSymbol->set_parent(scope);
         }
      ROSE_ASSERT(varSymbol); 
+     ROSE_ASSERT(varSymbol->get_declaration() != NULL); 
 
      SgVarRefExp *varRef = new SgVarRefExp(varSymbol);
      setOneSourcePositionForTransformation(varRef);
@@ -5627,7 +5640,7 @@ SgClassDeclaration * SageBuilder::buildClassDeclaration_nfi(const SgName& name, 
        // of source position that would be more precise.  FIXME.
        // setOneSourcePositionNull(nondefdecl);
           setOneSourcePositionForTransformation(nondefdecl);
-          ROSE_ASSERT (nondefdecl->get_startOfConstruct() != __null);
+          ROSE_ASSERT (nondefdecl->get_startOfConstruct() != NULL);
 
           nondefdecl->set_firstNondefiningDeclaration(nondefdecl);
           nondefdecl->set_definingDeclaration(defdecl);

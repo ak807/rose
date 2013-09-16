@@ -183,7 +183,12 @@ AstTests::runAllTests(SgProject* sageProject)
   // This is because when building AST bottom-up, some temporary symbol may be generated to be referenced
   // by those variable references generated just using names. When all variable references are fixed,
   // those symbols are not used any more and then should be removed from memory pool.
-     SageInterface::clearUnusedVariableSymbols();
+  //
+  // Liao 1/24/2013: I have to comment this out
+  // for #define N 1000, when N is used in OpenMP directives, the OmpSupport::attachOmpAttributeInfo() will try to generate a 
+  // variable reference to N, But N cannot be found in AST, so unknownType is used.  But symbols with unknowntype will be removed
+  // by this clearUnusedVariableSymbols()
+     //SageInterface::clearUnusedVariableSymbols();
 
   // printf ("Inside of AstTests::runAllTests(sageProject = %p) \n",sageProject);
 
@@ -3472,6 +3477,12 @@ TestLValues::visit ( SgNode* node )
                                 verifiedLValue = (cond->get_true_exp()->isLValue() && cond->get_false_exp()->isLValue()) && (cond->get_true_exp()->get_type() == cond->get_false_exp()->get_type());
                                 break;
                         }
+                        case V_SgShapeExpression:
+                        {
+                            SgShapeExpression* shapeExp = isSgShapeExpression(node);
+                            verifiedLValue = (shapeExp->get_rhs_operand()->isLValue());
+                            break;
+                        }
                         case V_SgShortVal:               
                         case V_SgCharVal:         
                         case V_SgUnsignedCharVal: 
@@ -3557,6 +3568,7 @@ TestLValues::visit ( SgNode* node )
                         case V_SgPseudoDestructorRefExp:                    
                         case V_SgCudaKernelCallExp:   
                         case V_SgCudaKernelExecConfig: 
+                        case V_SgArraySectionExp:
                                 break;
                         /*UseRenameExpression*/
                         /*UseOnlyExpression*/ 

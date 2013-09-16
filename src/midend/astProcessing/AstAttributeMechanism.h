@@ -5,10 +5,11 @@
 #define ASTATTRIBUTEMECHANISM_H
 
 #include "AttributeMechanism.h"
+#include "rosedll.h"
 
 class SgNode;
 
-class AstAttribute
+class ROSE_DLL_API AstAttribute
    {
   // This class contains no data and is to be used as a based class (typically, but not required)
   // to support under-defined attributes to be attached to AST IR nodes.
@@ -196,6 +197,39 @@ class AstRegExAttribute : public AstAttribute
 
           AstRegExAttribute();
           AstRegExAttribute(const std::string & s);
+   };
+
+// PC (10/21/2012): Added new kind of attribute for handling regex trees.
+/*!
+ *  \brief Attribute corresponding to an SgNode.
+ *
+ *  A SgNode attribute may be used to "dynamically add" an SgNode field to
+ * an AST node.
+ */
+class AstSgNodeAttribute : public AstAttribute
+   {
+          SgNode *node;
+
+     public:
+          SgNode *getNode();
+
+          AstSgNodeAttribute();
+          AstSgNodeAttribute(SgNode *node);
+   };
+
+class AstSgNodeListAttribute : public AstAttribute
+   {
+          std::vector<SgNode *> nodeList;
+
+     public:
+          std::vector<SgNode *> &getNodeList();
+          void addNode(SgNode *);
+          void setNode(SgNode *, int);
+          SgNode *getNode(int);
+          int size();
+
+          AstSgNodeListAttribute();
+          AstSgNodeListAttribute(std::vector<SgNode *> &);
    };
 
 #endif

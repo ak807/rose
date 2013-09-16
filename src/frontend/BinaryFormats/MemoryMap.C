@@ -5,9 +5,27 @@
 #include <cerrno>
 #include <fstream>
 
-#include <unistd.h>
 #include <fcntl.h>
+#include <stdio.h>
+#ifndef _MSC_VER
+#include <unistd.h>
 #include <sys/mman.h>
+#else
+#include <io.h>
+  inline void * mmap(void*, size_t length, int, int, int, off_t)
+  {
+    return new char[length];
+  }
+  inline void munmap(void* p_data, size_t)
+  {
+    delete [] (char *)p_data;
+  }
+#define MAP_FAILED 0
+#undef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(expression) expression
+#define PROT_WRITE 0x02
+#define F_OK 0
+#endif
 
 std::ostream& operator<<(std::ostream &o, const MemoryMap               &x) { x.print(o); return o; }
 std::ostream& operator<<(std::ostream &o, const MemoryMap::Exception    &x) { x.print(o); return o; }
@@ -211,11 +229,7 @@ MemoryMap::ByteBuffer::create_from_file(const std::string &filename, size_t offs
     // Read data from file until EOF
     rose_addr_t size = offset > (size_t)sb.st_size ? 0 : sb.st_size-offset;
     uint8_t *data = new uint8_t[size];
-#ifndef _MSC_VER
     ssize_t n = TEMP_FAILURE_RETRY(::read(fd, data, size));
-#else
-    ROSE_ASSERT(!"lacking Windows support");
-#endif
     if (-1==n || n!=sb.st_size) {
         delete[] data;
         close(fd);
@@ -714,6 +728,8 @@ MemoryMap::read1(void *dst_buf/*=NULL*/, rose_addr_t start_va, size_t desired, u
     const Extent &range = found->first;
     assert(range.contains(Extent(start_va)));
 
+    desired = std::min((rose_addr_t)desired, (range.last()-start_va)+1);
+
     const Segment &segment = found->second;
     if ((segment.get_mapperms() & req_perms) != req_perms || !segment.check(range))
         return 0;
@@ -808,7 +824,8 @@ MemoryMap::va_extents() const
 void
 MemoryMap::mprotect(Extent range, unsigned perms, bool relax)
 {
-    while (!range.empty()) {
+    bool done = false;
+    while (!range.empty() && !done) {
         Segments::iterator found = p_segments.lower_bound(range.first());
 
         // Skip over leading part of range that's not mapped
@@ -824,7 +841,9 @@ MemoryMap::mprotect(Extent range, unsigned perms, bool relax)
         }
 
         Segment &segment = found->second;
-        const Extent &segment_range = found->first;
+        const Extent segment_range = found->first; // don't use a reference; it might be deleted by MemoryMap::insert() below
+        done = segment_range.last() >= range.last();
+
         if (found->second.get_mapperms()!=perms) {
             if (range.contains(segment_range)) {
                 // we can just change the segment in place
@@ -836,13 +855,12 @@ MemoryMap::mprotect(Extent range, unsigned perms, bool relax)
                 Segment new_segment = segment;
                 new_segment.set_mapperms(perms);
                 new_segment.set_buffer_offset(segment.get_buffer_offset(segment_range, new_range.first()));
-                p_segments.insert(new_range, new_segment, true/*make hole*/);
+                p_segments.insert(new_range, new_segment, true/*make hole*/); // 'segment' is now invalid
             }
         }
 
-        if (segment_range.last() >= range.last())
-            break;
-        range = Extent::inin(segment_range.last()+1, range.last());
+        if (!done)
+            range = Extent::inin(segment_range.last()+1, range.last());
     }
 }
 

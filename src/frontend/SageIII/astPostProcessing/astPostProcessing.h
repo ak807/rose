@@ -47,6 +47,10 @@
 // original expression trees.
 #include "fixupConstantFoldedValues.h"
 
+// DQ (10/5/2012): Fixup known macros that might expand into a recursive mess in the unparsed code.
+#include "fixupSelfReferentialMacros.h"
+
+
 /*! \brief Postprocessing that is not likely to be handled in the EDG/Sage III translation.
  */
 void postProcessingSupport (SgNode* node);
@@ -63,6 +67,6 @@ void postProcessingSupport (SgNode* node);
        4) ...
 
  */
-void AstPostProcessing(SgNode* node);
+ROSE_DLL_API void AstPostProcessing(SgNode* node);
 
 #endif

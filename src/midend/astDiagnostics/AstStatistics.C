@@ -510,7 +510,6 @@ void AstNodeMemoryPoolStatistics::visit ( SgNode* node)
           IR_NODE_VISIT_CASE(SgAsmQuadWordValueExpression)
           IR_NODE_VISIT_CASE(SgAsmSingleFloatValueExpression)
           IR_NODE_VISIT_CASE(SgAsmDoubleFloatValueExpression)
-          IR_NODE_VISIT_CASE(SgAsmVectorValueExpression)
           IR_NODE_VISIT_CASE(SgAsmValueExpression)
           IR_NODE_VISIT_CASE(SgAsmExprListExp)
           IR_NODE_VISIT_CASE(SgAsmExpression)
@@ -723,6 +722,8 @@ void AstNodeMemoryPoolStatistics::visit ( SgNode* node)
           IR_NODE_VISIT_CASE(SgLocatedNodeSupport)
           IR_NODE_VISIT_CASE(SgToken)
 
+          IR_NODE_VISIT_CASE(SgArraySectionExp)
+          IR_NODE_VISIT_CASE(SgShapeExpression)
        // IR_NODE_VISIT_CASE()
 
           default:

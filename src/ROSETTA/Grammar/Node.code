@@ -95,19 +95,20 @@ public:
 struct HexdumpFormat {
     HexdumpFormat()
         : prefix(NULL), width(16), colsize(8), addr_fmt(NULL), multiline(false),
-          show_numeric(true), numeric_fmt(NULL), pad_numeric(true),
+          show_numeric(true), numeric_fmt(NULL), numeric_sep(NULL), pad_numeric(true),
           show_chars(true), pad_chars(false)
         {}
     /* General settings */
     const char *prefix;         /**< Characters to emit after internal linefeeds. */
     size_t width;               /**< Bytes per line of output (default 16). */
     size_t colsize;             /**< Bytes per column group (default 8). */
-    const char *addr_fmt;       /**< Printf format for addresses (default "0x%08llx:"). */
+    const char *addr_fmt;       /**< Printf format for addresses (default "0x%08llx: "). */
     bool multiline;             /**< Emit prefix at beginning and line feed at end of output. */
 
     /* Settings for numeric output of bytes */
     bool show_numeric;		/**< Show numeric format of bytes (default true). */
-    const char *numeric_fmt;    /**< Printf format for bytes (default " %02x"). */
+    const char *numeric_fmt;    /**< Printf format for bytes (default "%02x"). */
+    const char *numeric_sep;    /**< String to print between numeric values (default " "). */
     bool pad_numeric;           /**< Pad numeric part of output with spaces for partial final line (default true). */
 
     /* Settings for ASCII output of bytes */
@@ -1352,12 +1353,12 @@ class ROSE_VisitorPattern;
 // typedef SgMangledNameList*                  SgMangledNameListPtr;
 
 // DQ (12/23/2005): support for traversal of AST using visitor pattern
-void traverseMemoryPoolNodes          ( ROSE_VisitTraversal & traversal );
-void traverseMemoryPoolVisitorPattern ( ROSE_VisitorPattern & visitor );
+ROSE_DLL_API void traverseMemoryPoolNodes          ( ROSE_VisitTraversal & traversal );
+ROSE_DLL_API void traverseMemoryPoolVisitorPattern ( ROSE_VisitorPattern & visitor );
 
 // DQ (2/9/2006): Added to support traversal over single representative of each IR node
 // This traversal helps support intrnal tools that call static member functions.
-void traverseRepresentativeNodes ( ROSE_VisitTraversal & traversal );
+ROSE_DLL_API void traverseRepresentativeNodes ( ROSE_VisitTraversal & traversal );
 
 // DQ (6/7/2010): Change the return type to size_t to support larger number of IR nodes
 // using values that overflow signed values of int.
@@ -1365,12 +1366,12 @@ void traverseRepresentativeNodes ( ROSE_VisitTraversal & traversal );
 // computation is done based on the memory pools (so it is exact).
 // int numberOfNodes();
 // int memoryUsage();
-size_t numberOfNodes();
-size_t memoryUsage();
+ROSE_DLL_API size_t numberOfNodes();
+ROSE_DLL_API size_t memoryUsage();
 
 // DQ: This function is used by the SgNode object to connect the unparser (in ROSE) to the AST.
 //     (this function prototype is replicated in the ROSE/src/unparser/unparser.h)
-std::string globalUnparseToString ( const SgNode* astNode, SgUnparse_Info* inputUnparseInfoPointer = NULL );
+ROSE_DLL_API std::string globalUnparseToString ( const SgNode* astNode, SgUnparse_Info* inputUnparseInfoPointer = NULL );
 
 // MS 2002: global type
 /*! \brief Access to C++ Run Time Information (RTI)
@@ -1513,7 +1514,7 @@ class SgShallowCopy : public SgCopyHelp
 \internal The name of this class should perhaps be changed to reflect that it is a "deep" copy.
 
  */
-class SgTreeCopy : public SgCopyHelp
+class ROSE_DLL_API SgTreeCopy : public SgCopyHelp
    {
      public:
 #if 0
@@ -2069,7 +2070,7 @@ HEADER_END
 
 HEADER_IS_CLASSNAME_START
      // the generated cast function
-     // friend $CLASSNAME* is$CLASSNAME ( SgNode* s );
+     // friend ROSE_DLL_API $CLASSNAME* is$CLASSNAME ( SgNode* s );
 
           typedef $BASECLASS base_node_type;
 HEADER_IS_CLASSNAME_END
@@ -2119,6 +2120,19 @@ void Range<rose_addr_t>::print(std::ostream &o) const
         o <<buf;
     }
 }
+
+// This resolves a linker error when building ROSE with Visual Studio.
+// If the above function is not called within the same file, the compiler
+// fails to generate the symbol.
+#ifdef _MSC_VER
+namespace {
+void instantiate_range_print_msvc()
+{
+  static Range<rose_addr_t> g;
+  g.print(std::cout);
+}
+}
+#endif
 
 // Support for global function type symbol table (moved to be static data pointer)
 // DQ (1/31/2006): Modified to build all types in the memory pools

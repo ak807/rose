@@ -19,6 +19,7 @@
 #include "x86InstructionSemantics.h"
 #include "BaseSemantics.h"
 #include "MemoryMap.h"
+#include "FormatRestorer.h"
 
 namespace BinaryAnalysis {                      // documented elsewhere
     namespace InstructionSemantics {            // documented elsewhere
@@ -96,6 +97,7 @@ namespace BinaryAnalysis {                      // documented elsewhere
                 /** Print the value. If a rename map is specified a named value will be renamed to have a shorter name.  See the
                  *  rename() method for details. */
                 void print(std::ostream &o, RenameMap *rmap=NULL) const {
+                    FormatRestorer restorer(o); // restore format flags when we leave this scope
                     uint64_t sign_bit = (uint64_t)1 << (nBits-1); /* e.g., 80000000 */
                     uint64_t val_mask = sign_bit - 1;             /* e.g., 7fffffff */
                     /*magnitude of negative value*/
@@ -292,11 +294,11 @@ namespace BinaryAnalysis {                      // documented elsewhere
                 const ValueType<32>& get_orig_ip() const { return orig_state.ip; }
 
                 /** Returns a copy of the state after removing memory that is not pertinent to an equal_states() comparison. */
-                typename State<ValueType>::Memory memory_for_equality(const State<ValueType>&) const;
+                typename BinaryAnalysis::InstructionSemantics::PartialSymbolicSemantics::State<ValueType>::Memory memory_for_equality(const State<ValueType>&) const;
 
                 /** Returns a copy of the current state after removing memory that is not pertinent to an equal_states()
                  *  comparison. */
-                typename State<ValueType>::Memory memory_for_equality() const { return memory_for_equality(cur_state); }
+                typename BinaryAnalysis::InstructionSemantics::PartialSymbolicSemantics::State<ValueType>::Memory memory_for_equality() const { return memory_for_equality(cur_state); }
 
                 /** Compares two states for equality. The comarison looks at all register values and the memory locations that
                  *  are different than their original value (but excluding differences due to clobbering). It does not compare
@@ -529,8 +531,9 @@ namespace BinaryAnalysis {                      // documented elsewhere
                 }
 
                 /** See NullSemantics::Policy::undefined_() */
-                ValueType<1> undefined_() const {
-                    return ValueType<1>();
+                template <size_t Len>
+                ValueType<Len> undefined_() const {
+                    return ValueType<Len>();
                 }
 
                 /** See NullSemantics::Policy::number() */
@@ -658,7 +661,7 @@ namespace BinaryAnalysis {                      // documented elsewhere
                 /** See NullSemantics::Policy::equalToZero() */
                 template <size_t Len>
                 ValueType<1> equalToZero(const ValueType<Len> &a) const {
-                    if (a.name) return undefined_();
+                    if (a.name) return undefined_<1>();
                     return a.offset ? false_() : true_();
                 }
 
@@ -1002,7 +1005,7 @@ namespace BinaryAnalysis {                      // documented elsewhere
             template<
                 template <template <size_t> class ValueType> class State,
                 template<size_t> class ValueType>
-            typename State<ValueType>::Memory
+            typename BinaryAnalysis::InstructionSemantics::PartialSymbolicSemantics::State<ValueType>::Memory
             Policy<State, ValueType>::memory_for_equality(const State<ValueType> &state) const
             {
                 State<ValueType> tmp_state = state;

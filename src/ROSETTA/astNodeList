@@ -8,6 +8,7 @@ SgAllocateStatement
 SgAndAssignOp
 SgAndOp
 SgArithmeticIfStatement
+SgArraySectionExp
 SgArrayType
 SgArrowExp
 SgArrowStarOp
@@ -185,6 +186,8 @@ SgAsmLESection
 SgAsmLESectionTable
 SgAsmLESectionTableEntry
 SgAsmMemoryReferenceExpression
+SgAsmMipsInstruction
+SgAsmMipsRegisterReferenceExpression
 SgAsmNEEntryPoint
 SgAsmNEEntryTable
 SgAsmNEFileHeader
@@ -247,7 +250,6 @@ SgAsmUnaryMinus
 SgAsmUnaryPlus
 SgAsmUnaryRrx
 SgAsmValueExpression
-SgAsmVectorValueExpression
 SgAsmWordValueExpression
 SgAsmx86Instruction
 SgAsmx86RegisterReferenceExpression
@@ -492,6 +494,7 @@ SgOmpBarrierStatement
 SgOmpCriticalStatement
 SgOmpClauseBodyStatement
 SgOmpBodyStatement
+SgOmpDependClause
 SgOmpDoStatement
 SgOmpFlushStatement
 SgOmpForStatement
@@ -505,14 +508,18 @@ SgOmpTaskStatement
 SgOmpTaskwaitStatement
 SgOmpThreadprivateStatement
 SgOmpWorkshareStatement
+SgOmpTargetStatement
+SgOmpTargetDataStatement
 SgOmpClause
 SgOmpCollapseClause
 SgOmpCopyinClause
 SgOmpCopyprivateClause
 SgOmpDefaultClause
 SgOmpExpressionClause
+SgOmpExpressionsClause
 SgOmpFirstprivateClause
 SgOmpIfClause
+SgOmpDeviceClause
 SgOmpLastprivateClause
 SgOmpNowaitClause
 SgOmpNumThreadsClause
@@ -523,6 +530,7 @@ SgOmpScheduleClause
 SgOmpSharedClause
 SgOmpUntiedClause
 SgOmpVariablesClause
+SgOmpMapClause
 SgOpenclAccessModeModifier
 SgOpenStatement
 SgOptions
@@ -565,6 +573,7 @@ SgScopeOp
 SgScopeStatement
 SgSequenceStatement
 SgSetComprehension
+SgShapeExpression
 SgShortVal
 SgSizeOfOp
 SgJavaInstanceOfOp
@@ -574,6 +583,7 @@ SgJavaThrowStatement
 SgJavaForEachStatement
 SgJavaSynchronizedStatement
 SgJavaParameterizedType
+SgJavaWildcardType
 SgSpecialFunctionModifier
 SgStatement
 SgStmtDeclarationStatement
